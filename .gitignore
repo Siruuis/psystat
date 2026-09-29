@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+release/
+engine/.venv/
+engine/__pycache__/
+engine/**/__pycache__/
+engine/dist/
+engine/build_pyi/
+release/
+*.log
+.DS_Store
