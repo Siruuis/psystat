@@ -49,6 +49,14 @@ interface Snapshot {
   rows: Row[];
 }
 
+export interface ConfirmState {
+  title?: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+}
+
 interface AppState {
   variables: Variable[];
   rows: Row[];
@@ -63,6 +71,9 @@ interface AppState {
   toggleValueLabels: () => void;
   notice: string | null;
   setNotice: (msg: string | null) => void;
+  confirm: ConfirmState | null;
+  askConfirm: (c: ConfirmState) => void;
+  closeConfirm: () => void;
   filterExpr: string | null;
   filterMask: boolean[] | null;
   setFilter: (expr: string, mask: boolean[]) => void;
@@ -130,6 +141,9 @@ export const useStore = create<AppState>((set, get) => ({
   setSelection: (selection) => set({ selection }),
   toggleValueLabels: () => set((state) => ({ showValueLabels: !state.showValueLabels })),
   setNotice: (notice) => set({ notice }),
+  confirm: null,
+  askConfirm: (confirm) => set({ confirm }),
+  closeConfirm: () => set({ confirm: null }),
 
   setFilter: (expr, mask) => set({ filterExpr: expr, filterMask: mask }),
   clearFilter: () => set({ filterExpr: null, filterMask: null }),

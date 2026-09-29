@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "./state/store";
 import { importFile } from "./lib/importFile";
 import { engineHealth } from "./lib/engine";
+import { initPyodide } from "./lib/pyodideEngine";
+import { initAutosave, loadAutosave } from "./lib/persist";
 import { saveProject, openProject, exportCsv } from "./lib/projectFile";
 import { exportWord, exportPdf } from "./lib/exportResults";
 import { selectionToTSV, writeClipboard } from "./lib/clipboard";
 import { ANALYSES, ANALYSIS_GROUPS, GRAPH_GROUP, analysisById, analysesInGroup, type AnalysisDef } from "./lib/analyses";
 import { MenuBar, type Menu } from "./components/MenuBar";
 import { Toolbar, type ToolButton } from "./components/Toolbar";
+import { Logo, LogoMark } from "./components/Logo";
+import { Icon } from "./components/Icon";
 import { DataView } from "./components/DataView";
 import { VariableView } from "./components/VariableView";
 import { OutputView } from "./components/OutputView";
@@ -20,6 +24,7 @@ import { TransformDialog, type TransformMode } from "./components/TransformDialo
 import { FindDialog } from "./components/FindDialog";
 import { PickVariableDialog } from "./components/PickVariableDialog";
 import { Toast } from "./components/Toast";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 
 type Tab = "data" | "variables" | "output";
 type Dialog =
@@ -38,8 +43,32 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("data");
   const [dialog, setDialog] = useState<Dialog>(null);
   const [engineOk, setEngineOk] = useState<boolean | null>(null);
+  const [boot, setBoot] = useState<{ loading: boolean; status: string; error: boolean }>({
+    loading: !window.psystat,
+    status: "Initialisation…",
+    error: false,
+  });
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () => (localStorage.getItem("psystat-theme") as "light" | "dark") || "light"
+  );
   const fileInput = useRef<HTMLInputElement>(null);
   const projectInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("psystat-theme", theme);
+  }, [theme]);
+  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
+
+  useEffect(() => {
+    initAutosave();
+    const snap = loadAutosave();
+    if (snap) {
+      useStore.getState().loadData(snap.variables, snap.rows, snap.fileName);
+      const when = new Date(snap.savedAt).toLocaleString("fr-FR");
+      useStore.getState().setNotice(`Session restaurée : ${snap.variables.length} variables (sauvegardée le ${when}).`);
+    }
+  }, []);
 
   const variables = useStore((s) => s.variables);
   const rows = useStore((s) => s.rows);
@@ -53,7 +82,16 @@ export default function App() {
   const weightVar = useStore((s) => s.weightVar);
 
   useEffect(() => {
-    engineHealth().then(setEngineOk);
+    if (window.psystat) {
+      engineHealth().then(setEngineOk);
+      return;
+    }
+    initPyodide((status) => setBoot((b) => ({ ...b, status })))
+      .then(() => {
+        setEngineOk(true);
+        setBoot({ loading: false, status: "", error: false });
+      })
+      .catch((e) => setBoot({ loading: true, status: String(e), error: true }));
   }, []);
 
   useEffect(() => {
@@ -112,6 +150,15 @@ export default function App() {
     s.deleteRange(Math.min(ar, fr), Math.min(ac, fc), Math.max(ar, fr), Math.max(ac, fc));
   };
 
+  const confirmIfData = (message: string, action: () => void) => {
+    if (hasData) store().askConfirm({ message, danger: true, confirmLabel: "Continuer", onConfirm: action });
+    else action();
+  };
+  const newDataset = () => confirmIfData(
+    "Créer un nouveau tableau va effacer les données actuelles. Les données non enregistrées seront perdues. Continuer ?",
+    () => { store().newDataset(); setTab("data"); }
+  );
+
   const insertVarAtSel = () => store().insertVariable(store().selection.fc);
   const insertRowAtSel = () => store().insertRow(store().selection.fr);
   const quickSort = (asc: boolean) => store().sortByColumn(store().selection.fc, asc);
@@ -149,9 +196,9 @@ export default function App() {
     {
       label: "Fichier",
       items: [
-        { label: "Nouveau", shortcut: "", onClick: () => { store().newDataset(); setTab("data"); } },
-        { label: "Ouvrir un projet…", onClick: () => projectInput.current?.click() },
-        { label: "Importer Excel / CSV…", onClick: () => fileInput.current?.click() },
+        { label: "Nouveau", shortcut: "", onClick: newDataset },
+        { label: "Ouvrir un projet…", onClick: () => confirmIfData("Ouvrir un projet remplacera les données actuelles. Continuer ?", () => projectInput.current?.click()) },
+        { label: "Importer Excel / CSV…", onClick: () => confirmIfData("Importer un fichier remplacera les données actuelles. Continuer ?", () => fileInput.current?.click()) },
         { separator: true },
         { label: "Enregistrer le projet", onClick: () => saveProject(store().fileName, store().variables, store().rows), disabled: !hasData },
         { label: "Exporter les données (CSV)", onClick: () => exportCsv(store().fileName, store().variables, store().rows), disabled: !hasData },
@@ -185,6 +232,8 @@ export default function App() {
       label: "Affichage",
       items: [
         { label: `${showValueLabels ? "✓ " : ""}Étiquettes de valeurs`, onClick: () => store().toggleValueLabels() },
+        { label: `${theme === "dark" ? "✓ " : ""}Thème sombre`, onClick: toggleTheme },
+        { separator: true },
         { label: "Données", onClick: () => setTab("data") },
         { label: "Variables", onClick: () => setTab("variables") },
         { label: "Résultats", onClick: () => setTab("output") },
@@ -240,8 +289,8 @@ export default function App() {
   ];
 
   const tools: ToolButton[] = [
-    { icon: "new", title: "Nouveau", onClick: () => { store().newDataset(); setTab("data"); } },
-    { icon: "open", title: "Ouvrir un projet", onClick: () => projectInput.current?.click() },
+    { icon: "new", title: "Nouveau", onClick: newDataset },
+    { icon: "open", title: "Ouvrir un projet", onClick: () => confirmIfData("Ouvrir un projet remplacera les données actuelles. Continuer ?", () => projectInput.current?.click()) },
     { icon: "save", title: "Enregistrer le projet", onClick: () => saveProject(store().fileName, store().variables, store().rows), disabled: !hasData, separatorAfter: true },
     { icon: "undo", title: "Annuler", onClick: () => store().undo(), disabled: !canUndo },
     { icon: "redo", title: "Rétablir", onClick: () => store().redo(), disabled: !canRedo, separatorAfter: true },
@@ -256,14 +305,35 @@ export default function App() {
 
   return (
     <div className="app">
+      {boot.loading && (
+        <div className="boot-overlay">
+          <div className="boot-card">
+            <div className="boot-brand">
+              <LogoMark size={48} />
+              <span>PsyStat</span>
+            </div>
+            {boot.error ? (
+              <div className="boot-error">Erreur de chargement du moteur : {boot.status}</div>
+            ) : (
+              <>
+                <div className="boot-spinner" />
+                <div className="boot-status">{boot.status}</div>
+                <div className="boot-hint">Premier chargement : Python et les bibliothèques scientifiques se téléchargent (~15 Mo). Les fois suivantes seront quasi instantanées grâce au cache.</div>
+              </>
+            )}
+            <img className="boot-uir" src="./uir-full.png" alt="Université Internationale de Rabat" />
+          </div>
+        </div>
+      )}
       <header className="app-header">
         <div className="titlebar">
-          <span className="brand">PsyStat</span>
+          <Logo />
           <span className="file-name">— {fileName}</span>
           <div className="spacer" />
-          <div className={`engine-badge ${engineOk ? "ok" : engineOk === false ? "ko" : ""}`}>
-            {engineOk == null ? "Moteur…" : engineOk ? "Moteur connecté" : "Moteur hors ligne"}
-          </div>
+          <button className="theme-toggle" title="Thème clair / sombre" onClick={toggleTheme}>
+            <Icon name="theme" size={16} />
+          </button>
+          <img className="uir-logo" src="./uir-logo.png" alt="Université Internationale de Rabat" title="Université Internationale de Rabat" />
         </div>
         <MenuBar menus={menus} />
         <Toolbar buttons={tools} />
@@ -326,6 +396,7 @@ export default function App() {
       <input ref={fileInput} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={onImport} />
       <input ref={projectInput} type="file" accept=".psystat,.json" style={{ display: "none" }} onChange={onOpenProject} />
       <Toast />
+      <ConfirmDialog />
     </div>
   );
 }

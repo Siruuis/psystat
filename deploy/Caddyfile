@@ -1,0 +1,20 @@
+# Caddyfile — HTTPS automatique (Let's Encrypt) pour PsyStat
+# Remplace psystat.ton-domaine.com par ton vrai domaine.
+# Place le contenu du dossier `dist/` (généré par `npm run build`) dans /var/www/psystat
+
+psystat.ton-domaine.com {
+    root * /var/www/psystat
+    encode gzip zstd
+    file_server
+
+    # Cache long pour les assets versionnés (hash dans le nom de fichier)
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+
+    # Pas de cache pour l'index (pour toujours servir la dernière version)
+    @html path / /index.html
+    header @html Cache-Control "no-cache"
+
+    # Bon type MIME pour le WebAssembly (utile si tu héberges Pyodide toi-même)
+    header /*.wasm Content-Type application/wasm
+}

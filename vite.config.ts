@@ -5,5 +5,6 @@ export default defineConfig({
   plugins: [react()],
   base: "./",
   server: { port: 5173, strictPort: true },
+  optimizeDeps: { exclude: ["pyodide"] },
   build: { outDir: "dist", emptyOutDir: true },
 });

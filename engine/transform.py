@@ -6,17 +6,38 @@ import pandas as pd
 
 from dataset import Dataset
 
+def _col(*a):
+    return np.vstack([np.asarray(x, dtype=float) for x in a])
+
+
 SAFE_FUNCS = {
+    # arithmétique
+    "abs": np.abs,
     "sqrt": np.sqrt,
+    "exp": np.exp,
+    "ln": np.log,
     "log": np.log,
     "log10": np.log10,
-    "exp": np.exp,
-    "abs": np.abs,
+    "lg10": np.log10,
     "round": np.round,
-    "mean": lambda *a: np.nanmean(np.vstack(a), axis=0),
-    "sum": lambda *a: np.nansum(np.vstack(a), axis=0),
-    "min": lambda *a: np.nanmin(np.vstack(a), axis=0),
-    "max": lambda *a: np.nanmax(np.vstack(a), axis=0),
+    "rnd": np.round,
+    "trunc": np.trunc,
+    "mod": np.mod,
+    # trigonométrie
+    "sin": np.sin,
+    "cos": np.cos,
+    "tan": np.tan,
+    "arsin": np.arcsin,
+    "artan": np.arctan,
+    # statistiques (sur plusieurs variables d'une même observation)
+    "mean": lambda *a: np.nanmean(_col(*a), axis=0),
+    "sum": lambda *a: np.nansum(_col(*a), axis=0),
+    "sd": lambda *a: np.nanstd(_col(*a), axis=0, ddof=1),
+    "std": lambda *a: np.nanstd(_col(*a), axis=0, ddof=1),
+    "variance": lambda *a: np.nanvar(_col(*a), axis=0, ddof=1),
+    "median": lambda *a: np.nanmedian(_col(*a), axis=0),
+    "min": lambda *a: np.nanmin(_col(*a), axis=0),
+    "max": lambda *a: np.nanmax(_col(*a), axis=0),
 }
 
 _BIN = {
@@ -73,6 +94,24 @@ def compute(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     arr = np.asarray(result, dtype=float)
     if arr.ndim == 0:
         arr = np.full(len(df), float(arr))
+
+    condition = params.get("condition")
+    if condition:
+        try:
+            raw = _eval(ast.parse(condition, mode="eval"), env)
+        except Exception as exc:
+            return {"error": f"Condition invalide : {exc}"}
+        cond = np.asarray(raw)
+        cond = cond != 0 if cond.dtype != bool else cond
+        cond = np.nan_to_num(cond.astype(float), nan=0).astype(bool)
+        name = params.get("name")
+        existing = (
+            pd.to_numeric(df[name], errors="coerce").to_numpy(dtype=float)
+            if name and name in df.columns
+            else np.full(len(df), np.nan)
+        )
+        arr = np.where(cond, arr, existing)
+
     values = [None if (v is None or (isinstance(v, float) and np.isnan(v))) else float(v) for v in arr]
     return {"values": values}
 

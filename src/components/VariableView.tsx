@@ -21,6 +21,7 @@ export function VariableView() {
   const renameVariable = useStore((s) => s.renameVariable);
   const removeVariable = useStore((s) => s.removeVariable);
   const addVariable = useStore((s) => s.addVariable);
+  const askConfirm = useStore((s) => s.askConfirm);
   const [labelsFor, setLabelsFor] = useState<number | null>(null);
 
   return (
@@ -120,7 +121,8 @@ export function VariableView() {
                     </select>
                   </td>
                   <td>
-                    <button className="link-btn" title="Supprimer" onClick={() => removeVariable(i)}>
+                    <button className="link-btn" title="Supprimer" onClick={() =>
+                      askConfirm({ message: `Supprimer la variable « ${v.name} » et toutes ses données ?`, danger: true, confirmLabel: "Supprimer", onConfirm: () => removeVariable(i) })}>
                       ✕
                     </button>
                   </td>

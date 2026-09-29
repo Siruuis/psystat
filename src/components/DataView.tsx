@@ -29,6 +29,7 @@ export function DataView() {
   const insertRow = useStore((s) => s.insertRow);
   const removeRow = useStore((s) => s.removeRow);
   const filterMask = useStore((s) => s.filterMask);
+  const askConfirm = useStore((s) => s.askConfirm);
   const [ctx, setCtx] = useState<{ x: number; y: number; items: ContextItem[] } | null>(null);
 
   const [editing, setEditing] = useState<{ r: number; c: number } | null>(null);
@@ -249,8 +250,13 @@ export function DataView() {
     }
   };
 
-  const pasteFromClipboard = (r: number, c: number) => {
-    const text = window.psystat?.clipboardRead?.() ?? "";
+  const pasteFromClipboard = async (r: number, c: number) => {
+    let text = "";
+    try {
+      text = window.psystat?.clipboardRead ? window.psystat.clipboardRead() : await navigator.clipboard.readText();
+    } catch {
+      text = "";
+    }
     if (!text) return;
     const matrix = parseClipboard(text);
     if (matrix.length === 1 && matrix[0].length === 1) setCellAuto(r, c, matrix[0][0]);
@@ -281,10 +287,12 @@ export function DataView() {
       { label: "Effacer le contenu", onClick: () => deleteRange(a, b, a2, b2) },
       { separator: true },
       { label: "Insérer une variable", onClick: () => insertVariable(c) },
-      { label: "Supprimer la variable", disabled: c >= variables.length, onClick: () => removeVariable(c) },
+      { label: "Supprimer la variable", disabled: c >= variables.length, onClick: () =>
+        askConfirm({ message: `Supprimer la variable « ${variables[c]?.name} » et toutes ses données ?`, danger: true, confirmLabel: "Supprimer", onConfirm: () => removeVariable(c) }) },
       { separator: true },
       { label: "Insérer une observation", onClick: () => insertRow(r) },
-      { label: "Supprimer l'observation", disabled: r >= rows.length, onClick: () => removeRow(r) },
+      { label: "Supprimer l'observation", disabled: r >= rows.length, onClick: () =>
+        askConfirm({ message: `Supprimer l'observation n°${r + 1} ?`, danger: true, confirmLabel: "Supprimer", onConfirm: () => removeRow(r) }) },
     ];
     setCtx({ x: e.clientX, y: e.clientY, items });
   };

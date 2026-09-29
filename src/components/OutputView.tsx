@@ -54,6 +54,7 @@ function Table({ table }: { table: ResultTable }) {
 export function OutputView() {
   const results = useStore((s) => s.results);
   const clearResults = useStore((s) => s.clearResults);
+  const askConfirm = useStore((s) => s.askConfirm);
 
   if (results.length === 0) {
     return <div className="empty">Les résultats de vos analyses apparaîtront ici.</div>;
@@ -62,7 +63,8 @@ export function OutputView() {
   return (
     <div className="output">
       <div className="output-toolbar">
-        <button className="ghost" onClick={clearResults}>
+        <button className="ghost" onClick={() =>
+          askConfirm({ message: "Effacer tous les résultats affichés ?", danger: true, confirmLabel: "Effacer", onConfirm: clearResults })}>
           Effacer les résultats
         </button>
       </div>

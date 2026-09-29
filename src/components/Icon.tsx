@@ -13,6 +13,7 @@ const PATHS: Record<string, string> = {
   compute: "M6 3h12v4H6zM8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h8",
   run: "M8 5v14l11-7z",
   find: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4-4",
+  theme: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z",
 };
 
 export function Icon({ name, size = 18 }: { name: string; size?: number }) {
