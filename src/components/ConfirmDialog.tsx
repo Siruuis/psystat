@@ -12,12 +12,13 @@ export function ConfirmDialog() {
 
   return (
     <div className="dialog-backdrop" onClick={close}>
-      <div className="dialog small" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-head">
-          <h2>{confirm.title ?? "Confirmation"}</h2>
-        </div>
-        <div className="dialog-body">
-          <p className="dialog-text">{confirm.message}</p>
+      <div className="dialog confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="confirm-body">
+          <div className={`confirm-icon ${confirm.danger ? "danger" : ""}`}>{confirm.danger ? "!" : "?"}</div>
+          <div className="confirm-text">
+            <h3>{confirm.title ?? "Confirmation"}</h3>
+            <p>{confirm.message}</p>
+          </div>
         </div>
         <div className="dialog-actions">
           <div className="spacer" />

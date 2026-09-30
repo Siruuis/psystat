@@ -325,8 +325,7 @@ export default function App() {
             ) : (
               <>
                 <div className="boot-spinner" />
-                <div className="boot-status">{boot.status}</div>
-                <div className="boot-hint">Premier chargement : Python et les bibliothèques scientifiques se téléchargent (~15 Mo). Les fois suivantes seront quasi instantanées grâce au cache.</div>
+                <div className="boot-status">Chargement…</div>
               </>
             )}
             <img className="boot-uir" src="./uir-full.png" alt="Université Internationale de Rabat" />

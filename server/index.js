@@ -60,5 +60,6 @@ app.delete("/api/projects/:id", requireAuth, (req, res) => {
 });
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/authcheck", requireAuth, (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, "127.0.0.1", () => console.log(`PsyStat API on 127.0.0.1:${PORT}`));

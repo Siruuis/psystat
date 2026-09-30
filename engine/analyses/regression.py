@@ -204,10 +204,16 @@ def _curve(df, dv, predictors, work):
 
 def run(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     df = dataset.to_frame()
+    df = df.loc[:, ~df.columns.duplicated()]
     kind = params.get("kind", "linear")
     dv = params["dependent"]
-    predictors = params["predictors"]
-    work = df[[dv] + predictors].apply(pd.to_numeric, errors="coerce").dropna()
+    predictors = [p for p in params["predictors"] if p != dv]
+    if not predictors:
+        return {"error": "Sélectionnez au moins un prédicteur différent de la variable dépendante."}
+    cols = list(dict.fromkeys([dv] + predictors))
+    work = df[cols].apply(pd.to_numeric, errors="coerce").dropna()
+    if work.shape[0] < len(predictors) + 2:
+        return {"error": "Pas assez d'observations valides pour estimer la régression (trop de valeurs manquantes ?)."}
 
     if kind == "logistic":
         return _logistic(df, dv, predictors, work)

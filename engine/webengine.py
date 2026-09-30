@@ -71,6 +71,39 @@ def analyses_list() -> list[str]:
     return list(REGISTRY.keys())
 
 
+_ERROR_MAP = [
+    ("one-dimensional", "La variable dépendante doit être une seule variable numérique. Vérifiez qu'aucune variable n'est sélectionnée en double (et qu'il n'existe pas deux variables portant le même nom)."),
+    ("perfect separation", "Séparation parfaite : un prédicteur prédit trop parfaitement l'issue. Retirez-le ou ajoutez des données."),
+    ("singular matrix", "Modèle inestimable : des prédicteurs sont redondants ou trop corrélés (colinéarité). Retirez un prédicteur."),
+    ("linalgerror", "Calcul impossible (matrice singulière) : prédicteurs trop corrélés ou données insuffisantes."),
+    ("must have at least", "Pas assez d'observations valides pour cette analyse."),
+    ("at least", "Pas assez d'observations valides pour cette analyse."),
+    ("zero-size array", "Aucune donnée valide (variables vides ou entièrement manquantes)."),
+    ("cannot convert", "Une variable choisie n'est pas numérique. Choisissez des variables numériques."),
+    ("could not convert", "Une variable choisie n'est pas numérique. Choisissez des variables numériques."),
+    ("input contains nan", "Trop de valeurs manquantes dans les variables choisies."),
+    ("contains nan", "Trop de valeurs manquantes dans les variables choisies."),
+    ("out of bounds", "Pas assez de groupes ou de données pour cette analyse."),
+    ("empty", "Aucune donnée à analyser. Vérifiez votre sélection."),
+    ("negative", "Des valeurs négatives empêchent ce calcul (ex. log ou racine)."),
+    ("identical", "Une variable est constante (toutes les valeurs identiques) : le calcul est impossible."),
+    ("degrees of freedom", "Pas assez de données (degrés de liberté insuffisants) pour ce test."),
+]
+
+
+def _friendly(exc: Exception) -> str:
+    msg = str(exc)
+    low = msg.lower()
+    for key, fr in _ERROR_MAP:
+        if key in low:
+            return fr
+    if isinstance(exc, KeyError):
+        return f"Variable introuvable ({msg}). Vérifiez votre sélection de variables."
+    if isinstance(exc, (ValueError, TypeError)) and len(msg) < 140:
+        return f"Impossible d'effectuer l'analyse : {msg}. Vérifiez vos variables et vos données."
+    return "Impossible d'effectuer l'analyse. Vérifiez que vos variables sont numériques, non constantes, et qu'il y a assez de données valides."
+
+
 def _expand_weight(ds: Dataset, weight: str | None) -> Dataset:
     if not weight or weight not in ds.columns:
         return ds
@@ -133,7 +166,7 @@ def dispatch_run(analysis, dataset_dict, params=None, split=None, weight=None) -
                 images.append(ni)
         return {"title": title or analysis, "tables": tables, "images": images}
     except Exception as exc:
-        return {"error": str(exc)}
+        return {"error": _friendly(exc)}
 
 
 def dispatch_transform(name, dataset_dict, params=None) -> dict[str, Any]:
@@ -143,7 +176,7 @@ def dispatch_transform(name, dataset_dict, params=None) -> dict[str, Any]:
     try:
         return fn(Dataset(**dataset_dict), params or {})
     except Exception as exc:
-        return {"error": str(exc)}
+        return {"error": _friendly(exc)}
 
 
 def run_json(payload_json: str) -> str:

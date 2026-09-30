@@ -1655,3 +1655,55 @@ html,
 .cloud-name { font-weight: 600; font-size: 13px; }
 .cloud-sub { font-size: 11.5px; color: var(--muted); }
 .cloud-actions { display: flex; align-items: center; gap: 8px; }
+
+/* Textes de labels lisibles en dark */
+[data-theme="dark"] .field-label { color: #c4cdd9; }
+[data-theme="dark"] .field label { color: var(--muted); }
+
+/* ===== Confirmation dialog (soigné) ===== */
+.confirm-dialog {
+  width: 420px;
+  max-width: 92vw;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.confirm-body {
+  display: flex;
+  gap: 16px;
+  padding: 24px 24px 8px;
+}
+.confirm-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  background: #e7effe;
+  color: var(--accent);
+}
+.confirm-icon.danger {
+  background: #fdeaea;
+  color: #d64541;
+}
+[data-theme="dark"] .confirm-icon { background: #21324e; }
+[data-theme="dark"] .confirm-icon.danger { background: #3a2020; }
+.confirm-text h3 {
+  margin: 2px 0 6px;
+  font-size: 16px;
+  color: var(--text);
+}
+.confirm-text p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.confirm-dialog .dialog-actions {
+  padding: 12px 20px 18px;
+  align-items: center;
+}
