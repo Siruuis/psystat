@@ -25,6 +25,8 @@ import { FindDialog } from "./components/FindDialog";
 import { PickVariableDialog } from "./components/PickVariableDialog";
 import { Toast } from "./components/Toast";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { CloudDialog } from "./components/CloudDialog";
+import { getMe, login, type Me } from "./lib/cloud";
 
 type Tab = "data" | "variables" | "output";
 type Dialog =
@@ -51,6 +53,8 @@ export default function App() {
   const [theme, setTheme] = useState<"light" | "dark">(
     () => (localStorage.getItem("psystat-theme") as "light" | "dark") || "light"
   );
+  const [me, setMe] = useState<Me | null>(null);
+  const [showCloud, setShowCloud] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const projectInput = useRef<HTMLInputElement>(null);
 
@@ -59,6 +63,10 @@ export default function App() {
     localStorage.setItem("psystat-theme", theme);
   }, [theme]);
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
+
+  useEffect(() => {
+    getMe().then(setMe);
+  }, []);
 
   useEffect(() => {
     initAutosave();
@@ -330,6 +338,16 @@ export default function App() {
           <Logo />
           <span className="file-name">— {fileName}</span>
           <div className="spacer" />
+          {me?.authEnabled && !me.authenticated && (
+            <button className="auth-btn" onClick={login}>
+              Connexion UIR
+            </button>
+          )}
+          {me?.authenticated && (
+            <button className="auth-btn cloud" title={me.email} onClick={() => setShowCloud(true)}>
+              ☁ {me.email?.split("@")[0]}
+            </button>
+          )}
           <button className="theme-toggle" title="Thème clair / sombre" onClick={toggleTheme}>
             <Icon name="theme" size={16} />
           </button>
@@ -395,6 +413,13 @@ export default function App() {
 
       <input ref={fileInput} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={onImport} />
       <input ref={projectInput} type="file" accept=".psystat,.json" style={{ display: "none" }} onChange={onOpenProject} />
+      {showCloud && me?.authenticated && me.email && (
+        <CloudDialog
+          email={me.email}
+          onClose={() => setShowCloud(false)}
+          onLoggedOut={() => { setMe({ authenticated: false, authEnabled: true }); setShowCloud(false); }}
+        />
+      )}
       <Toast />
       <ConfirmDialog />
     </div>

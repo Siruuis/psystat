@@ -347,7 +347,7 @@ export function DataView() {
                   className={`${c >= variables.length ? "ghost-head" : ""} ${c >= cMin && c <= cMax && c < variables.length ? "col-selected" : ""}`}
                   onClick={() => c < variables.length && selectColumn(c)}
                   onDoubleClick={() => c < variables.length && setEditingHeader(c)}
-                  title={c < variables.length ? variables[c].label : ""}
+                  title={c < variables.length ? variables[c].name : ""}
                 >
                   {editingHeader === c ? (
                     <input
@@ -361,7 +361,7 @@ export function DataView() {
                       }}
                     />
                   ) : c < variables.length ? (
-                    variables[c].name
+                    variables[c].label || variables[c].name
                   ) : (
                     ""
                   )}

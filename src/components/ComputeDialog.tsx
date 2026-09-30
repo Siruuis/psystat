@@ -131,8 +131,8 @@ export function ComputeDialog({ onClose }: { onClose: () => void }) {
           <div className="compute-cols">
             <div className="compute-varlist">
               {variables.map((v) => (
-                <button key={v.name} className="var-row" title={v.label} onDoubleClick={() => insert(v.name)} onClick={() => insert(v.name)}>
-                  {v.name}
+                <button key={v.name} className="var-row" title={v.name} onDoubleClick={() => insert(v.name)} onClick={() => insert(v.name)}>
+                  {v.label || v.name}
                 </button>
               ))}
               {variables.length === 0 && <div className="var-empty">Aucune variable</div>}

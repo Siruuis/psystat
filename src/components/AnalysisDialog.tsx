@@ -82,10 +82,9 @@ export function AnalysisDialog({ def, onClose }: { def: AnalysisDef; onClose: ()
           </label>
           <div className="var-list">
             {varOptions(f).map((v) => (
-              <label key={v.name} className={`var-item ${selected.includes(v.name) ? "on" : ""}`}>
+              <label key={v.name} className={`var-item ${selected.includes(v.name) ? "on" : ""}`} title={v.name}>
                 <input type="checkbox" checked={selected.includes(v.name)} onChange={() => toggleMulti(f.key, v.name)} />
-                <span className="var-name">{v.name}</span>
-                {v.label && <span className="var-desc">{v.label}</span>}
+                <span className="var-name">{v.label || v.name}</span>
               </label>
             ))}
             {varOptions(f).length === 0 && <div className="var-empty">Aucune variable compatible.</div>}
@@ -100,8 +99,8 @@ export function AnalysisDialog({ def, onClose }: { def: AnalysisDef; onClose: ()
           <select value={values[f.key] as string} onChange={(e) => set(f.key, e.target.value)}>
             <option value="">-- choisir --</option>
             {varOptions(f).map((v) => (
-              <option key={v.name} value={v.name}>
-                {v.label ? `${v.name} (${v.label})` : v.name}
+              <option key={v.name} value={v.name} title={v.name}>
+                {v.label || v.name}
               </option>
             ))}
           </select>
