@@ -184,7 +184,7 @@ export default function App() {
             v.name,
             v.type === "numeric" ? "Numérique" : "Chaîne",
             v.label || "",
-            v.measure,
+            { scale: "Échelle", nominal: "Nominale", ordinal: "Ordinale" }[v.measure] ?? v.measure,
             Object.keys(v.labels).length ? `${Object.keys(v.labels).length}` : "",
             v.missing.length ? v.missing.join(", ") : "",
           ]),
