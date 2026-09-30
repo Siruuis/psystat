@@ -34,7 +34,12 @@ export function login() {
 }
 
 export async function logout() {
-  await api("/auth/logout", { method: "POST" });
+  try {
+    await api("/auth/logout", { method: "POST" });
+  } catch {
+    /* ignore */
+  }
+  window.location.href = "/";
 }
 
 export async function listProjects(): Promise<CloudProject[]> {

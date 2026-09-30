@@ -100,6 +100,7 @@ export function registerAuth(app) {
       redirect_uri: MS_REDIRECT_URI,
       response_mode: "query",
       scope: "openid profile email",
+      prompt: "select_account",
       state,
     });
     res.redirect(`${AUTHORIZE_URL}?${params.toString()}`);
