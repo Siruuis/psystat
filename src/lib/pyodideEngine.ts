@@ -4,24 +4,59 @@ import type { Variable, Row } from "../types";
 const engineFiles = import.meta.glob("/engine/*.py", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const analysisFiles = import.meta.glob("/engine/analyses/*.py", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
+export type EngineState = { label: string; progress: number; done: boolean };
+
 let pyodide: any = null;
 let ready: Promise<void> | null = null;
-let currentStatus = "";
-const statusListeners = new Set<(s: string) => void>();
+let state: EngineState = { label: "", progress: 0, done: false };
+const statusListeners = new Set<(s: EngineState) => void>();
 
-function setStatus(s: string) {
-  currentStatus = s;
-  statusListeners.forEach((fn) => fn(s));
+let target = 0;
+let trickle: ReturnType<typeof setInterval> | null = null;
+
+function emit() {
+  statusListeners.forEach((fn) => fn(state));
 }
 
-export function onEngineStatus(fn: (s: string) => void): () => void {
+function startTrickle() {
+  if (trickle) return;
+  trickle = setInterval(() => {
+    if (state.progress < target) {
+      const next = Math.min(target, state.progress + Math.max(0.4, (target - state.progress) * 0.06));
+      state = { ...state, progress: next };
+      emit();
+    }
+  }, 120);
+}
+
+function stopTrickle() {
+  if (trickle) {
+    clearInterval(trickle);
+    trickle = null;
+  }
+}
+
+function setPhase(label: string, to: number) {
+  state = { label, progress: state.progress, done: false };
+  target = to;
+  emit();
+  startTrickle();
+}
+
+function finishPhase() {
+  stopTrickle();
+  state = { label: "", progress: 100, done: true };
+  emit();
+}
+
+export function onEngineStatus(fn: (s: EngineState) => void): () => void {
   statusListeners.add(fn);
-  if (currentStatus) fn(currentStatus);
+  if (state.label || state.done) fn(state);
   return () => statusListeners.delete(fn);
 }
 
-export function getEngineStatus(): string {
-  return currentStatus;
+export function getEngineState(): EngineState {
+  return state;
 }
 
 function buildMeta(variables: Variable[]) {
@@ -39,11 +74,23 @@ export function isPyodideReady(): boolean {
 export function initPyodide(): Promise<void> {
   if (ready) return ready;
   ready = (async () => {
-    setStatus("Démarrage de Python…");
+    try {
+      await load();
+    } catch (e) {
+      stopTrickle();
+      throw e;
+    }
+  })();
+  return ready;
+}
+
+async function load(): Promise<void> {
+  {
+    setPhase("Démarrage du moteur Python…", 25);
     pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/` });
-    setStatus("Chargement des bibliothèques scientifiques…");
+    setPhase("Chargement des bibliothèques scientifiques…", 82);
     await pyodide.loadPackage(["numpy", "scipy", "pandas", "scikit-learn", "statsmodels", "matplotlib", "micropip"]);
-    setStatus("Installation de pingouin…");
+    setPhase("Installation de pingouin…", 92);
     const micropip = pyodide.pyimport("micropip");
     try {
       await micropip.install("pingouin==0.5.4");
@@ -55,7 +102,7 @@ export function initPyodide(): Promise<void> {
         console.error("pingouin install failed", e);
       }
     }
-    onStatus?.("Chargement du moteur PsyStat…");
+    setPhase("Chargement du moteur PsyStat…", 99);
     for (const dir of ["/pyengine", "/pyengine/analyses"]) {
       try {
         pyodide.FS.mkdir(dir);
@@ -73,9 +120,8 @@ export function initPyodide(): Promise<void> {
       pyodide.FS.writeFile(`/pyengine/analyses/${name}`, src);
     }
     pyodide.runPython("import sys, warnings; warnings.filterwarnings('ignore'); sys.path.insert(0, '/pyengine'); import webengine");
-    setStatus("");
-  })();
-  return ready;
+    finishPhase();
+  }
 }
 
 async function callJson(fn: "run_json" | "transform_json", payload: unknown): Promise<any> {

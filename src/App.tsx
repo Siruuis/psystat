@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "./state/store";
 import { importFile } from "./lib/importFile";
 import { engineHealth } from "./lib/engine";
-import { initPyodide, onEngineStatus } from "./lib/pyodideEngine";
+import { initPyodide, onEngineStatus, type EngineState } from "./lib/pyodideEngine";
 import { initAutosave, loadAutosave } from "./lib/persist";
 import { saveProject, openProject, exportCsv } from "./lib/projectFile";
 import { exportWord, exportPdf } from "./lib/exportResults";
@@ -45,7 +45,11 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("data");
   const [dialog, setDialog] = useState<Dialog>(null);
   const [engineOk, setEngineOk] = useState<boolean | null>(null);
-  const [engineStatus, setEngineStatus] = useState<string>(window.psystat ? "" : "Préparation…");
+  const [engine, setEngine] = useState<EngineState>({
+    label: window.psystat ? "" : "Préparation…",
+    progress: 0,
+    done: !!window.psystat,
+  });
   const [engineError, setEngineError] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(
     () => (localStorage.getItem("psystat-theme") as "light" | "dark") || "light"
@@ -91,16 +95,10 @@ export default function App() {
       engineHealth().then(setEngineOk);
       return;
     }
-    const off = onEngineStatus(setEngineStatus);
+    const off = onEngineStatus(setEngine);
     initPyodide()
-      .then(() => {
-        setEngineOk(true);
-        setEngineStatus("");
-      })
-      .catch((e) => {
-        setEngineError(true);
-        setEngineStatus(String(e));
-      });
+      .then(() => setEngineOk(true))
+      .catch(() => setEngineError(true));
     return off;
   }, []);
 
@@ -313,8 +311,23 @@ export default function App() {
     { icon: "run", title: "Descriptives rapides", onClick: () => { const d = analysisById("descriptives"); if (d) setDialog({ type: "analysis", def: d }); }, disabled: !hasData },
   ];
 
+  const showEngineBar = !window.psystat && !engine.done && (engine.label !== "" || engineError);
+
   return (
     <div className="app">
+      {showEngineBar && (
+        <div className={`engine-bar${engineError ? " error" : ""}`}>
+          <div className="engine-bar-head">
+            <span className="engine-bar-label">
+              {engineError ? "Échec du chargement du moteur de calcul" : engine.label}
+            </span>
+            {!engineError && <span className="engine-bar-pct">{Math.round(engine.progress)} %</span>}
+          </div>
+          <div className="engine-bar-track">
+            <div className="engine-bar-fill" style={{ width: `${engineError ? 100 : engine.progress}%` }} />
+          </div>
+        </div>
+      )}
       <header className="app-header">
         <div className="titlebar">
           <Logo />
@@ -357,15 +370,6 @@ export default function App() {
           {splitVar && <span className="split-badge"> · scindé par {splitVar}</span>}
           {weightVar && <span className="split-badge"> · pondéré par {weightVar}</span>}
           {running && <span className="running"> · calcul en cours…</span>}
-          {engineError ? (
-            <span className="engine-chip error" title={engineStatus}> · moteur indisponible</span>
-          ) : (
-            engineStatus && (
-              <span className="engine-chip">
-                <span className="engine-dot" /> préparation du moteur de calcul…
-              </span>
-            )
-          )}
         </div>
       </nav>
 
