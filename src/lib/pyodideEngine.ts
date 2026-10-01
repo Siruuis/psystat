@@ -36,7 +36,7 @@ function stopTrickle() {
   }
 }
 
-const LOADING_LABEL = "Chargement du moteur de calcul… (un peu long à la première visite, instantané ensuite)";
+const LOADING_LABEL = "Chargement du moteur de calcul…";
 
 function setPhase(to: number) {
   state = { label: LOADING_LABEL, progress: state.progress, done: false };
