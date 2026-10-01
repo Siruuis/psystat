@@ -243,6 +243,32 @@ html,
   color: var(--accent);
 }
 
+.engine-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.engine-chip.error {
+  color: #c0392b;
+  font-style: normal;
+}
+
+.engine-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: engine-pulse 1s ease-in-out infinite;
+}
+
+@keyframes engine-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .content {
   flex: 1;
   overflow: auto;

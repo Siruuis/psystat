@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "./state/store";
 import { importFile } from "./lib/importFile";
 import { engineHealth } from "./lib/engine";
-import { initPyodide } from "./lib/pyodideEngine";
+import { initPyodide, onEngineStatus } from "./lib/pyodideEngine";
 import { initAutosave, loadAutosave } from "./lib/persist";
 import { saveProject, openProject, exportCsv } from "./lib/projectFile";
 import { exportWord, exportPdf } from "./lib/exportResults";
@@ -10,7 +10,7 @@ import { selectionToTSV, writeClipboard } from "./lib/clipboard";
 import { ANALYSES, ANALYSIS_GROUPS, GRAPH_GROUP, analysisById, analysesInGroup, type AnalysisDef } from "./lib/analyses";
 import { MenuBar, type Menu } from "./components/MenuBar";
 import { Toolbar, type ToolButton } from "./components/Toolbar";
-import { Logo, LogoMark } from "./components/Logo";
+import { Logo } from "./components/Logo";
 import { Icon } from "./components/Icon";
 import { DataView } from "./components/DataView";
 import { VariableView } from "./components/VariableView";
@@ -45,11 +45,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("data");
   const [dialog, setDialog] = useState<Dialog>(null);
   const [engineOk, setEngineOk] = useState<boolean | null>(null);
-  const [boot, setBoot] = useState<{ loading: boolean; status: string; error: boolean }>({
-    loading: !window.psystat,
-    status: "Initialisation…",
-    error: false,
-  });
+  const [engineStatus, setEngineStatus] = useState<string>(window.psystat ? "" : "Préparation…");
+  const [engineError, setEngineError] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(
     () => (localStorage.getItem("psystat-theme") as "light" | "dark") || "light"
   );
@@ -94,12 +91,17 @@ export default function App() {
       engineHealth().then(setEngineOk);
       return;
     }
-    initPyodide((status) => setBoot((b) => ({ ...b, status })))
+    const off = onEngineStatus(setEngineStatus);
+    initPyodide()
       .then(() => {
         setEngineOk(true);
-        setBoot({ loading: false, status: "", error: false });
+        setEngineStatus("");
       })
-      .catch((e) => setBoot({ loading: true, status: String(e), error: true }));
+      .catch((e) => {
+        setEngineError(true);
+        setEngineStatus(String(e));
+      });
+    return off;
   }, []);
 
   useEffect(() => {
@@ -313,25 +315,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {boot.loading && (
-        <div className="boot-overlay">
-          <div className="boot-card">
-            <div className="boot-brand">
-              <LogoMark size={48} />
-              <span>PsyStat</span>
-            </div>
-            {boot.error ? (
-              <div className="boot-error">Erreur de chargement du moteur : {boot.status}</div>
-            ) : (
-              <>
-                <div className="boot-spinner" />
-                <div className="boot-status">Chargement…</div>
-              </>
-            )}
-            <img className="boot-uir" src="./uir-full.png" alt="Université Internationale de Rabat" />
-          </div>
-        </div>
-      )}
       <header className="app-header">
         <div className="titlebar">
           <Logo />
@@ -374,6 +357,15 @@ export default function App() {
           {splitVar && <span className="split-badge"> · scindé par {splitVar}</span>}
           {weightVar && <span className="split-badge"> · pondéré par {weightVar}</span>}
           {running && <span className="running"> · calcul en cours…</span>}
+          {engineError ? (
+            <span className="engine-chip error" title={engineStatus}> · moteur indisponible</span>
+          ) : (
+            engineStatus && (
+              <span className="engine-chip">
+                <span className="engine-dot" /> préparation du moteur de calcul…
+              </span>
+            )
+          )}
         </div>
       </nav>
 

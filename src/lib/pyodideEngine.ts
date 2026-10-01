@@ -6,6 +6,23 @@ const analysisFiles = import.meta.glob("/engine/analyses/*.py", { query: "?raw",
 
 let pyodide: any = null;
 let ready: Promise<void> | null = null;
+let currentStatus = "";
+const statusListeners = new Set<(s: string) => void>();
+
+function setStatus(s: string) {
+  currentStatus = s;
+  statusListeners.forEach((fn) => fn(s));
+}
+
+export function onEngineStatus(fn: (s: string) => void): () => void {
+  statusListeners.add(fn);
+  if (currentStatus) fn(currentStatus);
+  return () => statusListeners.delete(fn);
+}
+
+export function getEngineStatus(): string {
+  return currentStatus;
+}
 
 function buildMeta(variables: Variable[]) {
   const meta: Record<string, unknown> = {};
@@ -19,14 +36,14 @@ export function isPyodideReady(): boolean {
   return pyodide != null;
 }
 
-export function initPyodide(onStatus?: (s: string) => void): Promise<void> {
+export function initPyodide(): Promise<void> {
   if (ready) return ready;
   ready = (async () => {
-    onStatus?.("Démarrage de Python…");
+    setStatus("Démarrage de Python…");
     pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/` });
-    onStatus?.("Chargement des bibliothèques scientifiques… (~15 Mo, mis en cache)");
+    setStatus("Chargement des bibliothèques scientifiques…");
     await pyodide.loadPackage(["numpy", "scipy", "pandas", "scikit-learn", "statsmodels", "matplotlib", "micropip"]);
-    onStatus?.("Installation de pingouin…");
+    setStatus("Installation de pingouin…");
     const micropip = pyodide.pyimport("micropip");
     try {
       await micropip.install("pingouin==0.5.4");
@@ -56,12 +73,13 @@ export function initPyodide(onStatus?: (s: string) => void): Promise<void> {
       pyodide.FS.writeFile(`/pyengine/analyses/${name}`, src);
     }
     pyodide.runPython("import sys, warnings; warnings.filterwarnings('ignore'); sys.path.insert(0, '/pyengine'); import webengine");
-    onStatus?.("Prêt.");
+    setStatus("");
   })();
   return ready;
 }
 
-function callJson(fn: "run_json" | "transform_json", payload: unknown): any {
+async function callJson(fn: "run_json" | "transform_json", payload: unknown): Promise<any> {
+  await initPyodide();
   const webengine = pyodide.pyimport("webengine");
   const out = webengine[fn](JSON.stringify(payload)) as string;
   return JSON.parse(out);
