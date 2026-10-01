@@ -13,6 +13,8 @@ def _oneway(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     work = df[[dv, factor]].copy()
     work[dv] = pd.to_numeric(work[dv], errors="coerce")
     work = work.dropna()
+    if work[factor].nunique() < 2:
+        return {"title": "ANOVA à un facteur", "error": "Le facteur doit comporter au moins 2 groupes distincts."}
     labels = dataset.value_labels(factor)
     work[factor] = work[factor].apply(lambda x: labels.get(str(x), str(x)))
 
@@ -79,6 +81,8 @@ def _factorial(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     work[dv] = pd.to_numeric(work[dv], errors="coerce")
     work = work.dropna()
     for f in factors:
+        if work[f].nunique() < 2:
+            return {"title": "ANOVA factorielle", "error": f"Le facteur « {f} » doit comporter au moins 2 groupes distincts."}
         labels = dataset.value_labels(f)
         work[f] = work[f].apply(lambda x: labels.get(str(x), str(x)))
 
