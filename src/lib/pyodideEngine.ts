@@ -36,8 +36,10 @@ function stopTrickle() {
   }
 }
 
-function setPhase(label: string, to: number) {
-  state = { label, progress: state.progress, done: false };
+const LOADING_LABEL = "Chargement du moteur de calcul… (un peu long à la première visite, instantané ensuite)";
+
+function setPhase(to: number) {
+  state = { label: LOADING_LABEL, progress: state.progress, done: false };
   target = to;
   emit();
   startTrickle();
@@ -86,11 +88,11 @@ export function initPyodide(): Promise<void> {
 
 async function load(): Promise<void> {
   {
-    setPhase("Démarrage du moteur Python…", 25);
+    setPhase(15);
     pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/` });
-    setPhase("Chargement des bibliothèques scientifiques…", 82);
+    setPhase(45);
     await pyodide.loadPackage(["numpy", "scipy", "pandas", "scikit-learn", "statsmodels", "matplotlib", "micropip"]);
-    setPhase("Installation de pingouin…", 92);
+    setPhase(95);
     const micropip = pyodide.pyimport("micropip");
     try {
       await micropip.install("pingouin==0.5.4");
@@ -102,7 +104,7 @@ async function load(): Promise<void> {
         console.error("pingouin install failed", e);
       }
     }
-    setPhase("Chargement du moteur PsyStat…", 99);
+    setPhase(99);
     for (const dir of ["/pyengine", "/pyengine/analyses"]) {
       try {
         pyodide.FS.mkdir(dir);

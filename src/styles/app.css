@@ -244,41 +244,50 @@ html,
 }
 
 .engine-bar {
-  padding: 8px 16px 10px;
-  background: var(--panel, #fff);
-  border-bottom: 1px solid var(--border, #e2e6ea);
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px 14px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .engine-bar-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: 12.5px;
-  margin-bottom: 6px;
+  gap: 10px;
+  font-size: 12px;
+  margin-bottom: 8px;
 }
 
 .engine-bar-label {
-  color: var(--text, #243043);
-  font-weight: 600;
+  color: var(--muted);
 }
 
 .engine-bar-pct {
   color: var(--accent);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .engine-bar-track {
   height: 6px;
   border-radius: 6px;
-  background: var(--border, #e2e6ea);
+  background: var(--border);
   overflow: hidden;
 }
 
 .engine-bar-fill {
   height: 100%;
   border-radius: 6px;
-  background: linear-gradient(90deg, var(--accent), var(--accent));
+  background: var(--accent);
   transition: width 0.25s ease;
 }
 
