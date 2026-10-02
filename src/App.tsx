@@ -315,22 +315,22 @@ export default function App() {
 
   return (
     <div className="app">
-      {showEngineBar && (
-        <div className={`engine-bar${engineError ? " error" : ""}`}>
-          <div className="engine-bar-head">
-            <span className="engine-bar-label">
-              {engineError ? "Échec du chargement du moteur de calcul" : engine.label}
-            </span>
-            {!engineError && <span className="engine-bar-pct">{Math.round(engine.progress)} %</span>}
-          </div>
-          <div className="engine-bar-track">
-            <div className="engine-bar-fill" style={{ width: `${engineError ? 100 : engine.progress}%` }} />
-          </div>
-        </div>
-      )}
       <header className="app-header">
         <div className="titlebar">
           <Logo />
+          {showEngineBar && (
+            <div className={`engine-bar${engineError ? " error" : ""}`}>
+              <div className="engine-bar-head">
+                <span className="engine-bar-label">
+                  {engineError ? "Échec du chargement du moteur de calcul" : engine.label}
+                </span>
+                {!engineError && <span className="engine-bar-pct">{Math.round(engine.progress)} %</span>}
+              </div>
+              <div className="engine-bar-track">
+                <div className="engine-bar-fill" style={{ width: `${engineError ? 100 : engine.progress}%` }} />
+              </div>
+            </div>
+          )}
           <span className="file-name">— {fileName}</span>
           <div className="spacer" />
           {me?.authEnabled && !me.authenticated && (

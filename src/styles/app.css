@@ -244,26 +244,21 @@ html,
 }
 
 .engine-bar {
-  position: fixed;
-  top: 12px;
+  position: absolute;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  width: min(360px, calc(100vw - 32px));
-  padding: 10px 14px 12px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(320px, 40vw);
+  pointer-events: none;
 }
 
 .engine-bar-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   font-size: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .engine-bar-label {
@@ -834,6 +829,7 @@ html,
   align-items: center;
   gap: 8px;
   padding: 6px 14px 2px;
+  position: relative;
 }
 
 .file-name {
