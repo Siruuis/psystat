@@ -4,6 +4,7 @@ import pandas as pd
 import pingouin as pg
 
 from dataset import Dataset
+from analyses import apa
 
 
 def _r(v, d=3):
@@ -35,12 +36,15 @@ def run(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     df = dataset.to_frame()
     kind = params.get("kind", "independent")
     tables = []
+    apa_txt = None
 
     if kind == "one_sample":
         var = params["variable"]
         popmean = float(params.get("popmean", 0))
         x = pd.to_numeric(df[var], errors="coerce").dropna()
         res = pg.ttest(x, popmean)
+        apa_txt = apa.ttest_one(var, x.mean(), x.std(ddof=1), popmean,
+                                res["T"].iloc[0], res["dof"].iloc[0], res["p-val"].iloc[0], res["cohen-d"].iloc[0])
         tables.append({
             "title": "Statistiques du groupe",
             "columns": ["Variable", "N", "Moyenne", "Écart-type", "Test contre"],
@@ -55,6 +59,9 @@ def run(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
         v1, v2 = params["variable1"], params["variable2"]
         pair = df[[v1, v2]].apply(pd.to_numeric, errors="coerce").dropna()
         res = pg.ttest(pair[v1], pair[v2], paired=True)
+        apa_txt = apa.ttest_paired(v1, pair[v1].mean(), pair[v1].std(ddof=1),
+                                   v2, pair[v2].mean(), pair[v2].std(ddof=1),
+                                   res["T"].iloc[0], res["dof"].iloc[0], res["p-val"].iloc[0], res["cohen-d"].iloc[0])
         tables.append({
             "title": "Statistiques des variables appariées",
             "columns": ["Variable", "N", "Moyenne", "Écart-type"],
@@ -119,4 +126,12 @@ def run(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
             "footnotes": ["Si Levene est significatif (p < .05), lisez la ligne « variances non supposées » (Welch)."],
         })
 
-    return {"title": "Test t", "tables": tables}
+        chosen = student if lev_p > 0.05 else welch
+        apa_txt = apa.ttest_independent(name_a, a.mean(), a.std(ddof=1), name_b, b.mean(), b.std(ddof=1),
+                                        chosen["T"].iloc[0], chosen["dof"].iloc[0],
+                                        chosen["p-val"].iloc[0], chosen["cohen-d"].iloc[0])
+
+    out = {"title": "Test t", "tables": tables}
+    if apa_txt:
+        out["apa"] = apa_txt
+    return out

@@ -440,7 +440,7 @@ export const useStore = create<AppState>((set, get) => ({
     const weight = get().weightVar;
     try {
       const data = await runAnalysis(analysis, variables, rows, params, split, weight);
-      get().addResult({ title: data.title ?? title, tables: data.tables, images: data.images, error: data.error });
+      get().addResult({ title: data.title ?? title, tables: data.tables, images: data.images, apa: data.apa, error: data.error });
       set({ running: false });
     } catch (err) {
       get().addResult({ title, error: String(err) });

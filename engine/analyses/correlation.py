@@ -5,6 +5,7 @@ from scipy import stats
 
 from dataset import Dataset
 from analyses.util import r
+from analyses import apa
 
 
 def _stars(p: float) -> str:
@@ -82,4 +83,14 @@ def run(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     for m in methods:
         tables.append(_matrix(data, variables, m, tail, flag))
 
-    return {"title": "Corrélations", "tables": tables}
+    out = {"title": "Corrélations", "tables": tables}
+    if len(variables) == 2:
+        pair = data[[variables[0], variables[1]]].dropna()
+        if pair.shape[0] >= 3:
+            m = methods[0]
+            coef, p = _corr_fn(m)(pair[variables[0]], pair[variables[1]])
+            if tail == "one":
+                p = p / 2
+            out["apa"] = apa.correlation_pair(variables[0], variables[1], coef, pair.shape[0], p,
+                                              METHOD_LABELS[m].split(" ")[0])
+    return out

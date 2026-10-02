@@ -42,6 +42,7 @@ export interface AnalysisResult {
   title: string;
   tables?: ResultTable[];
   images?: ResultImage[];
+  apa?: string;
   error?: string;
   ranAt: string;
 }

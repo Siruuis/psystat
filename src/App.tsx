@@ -26,11 +26,13 @@ import { PickVariableDialog } from "./components/PickVariableDialog";
 import { Toast } from "./components/Toast";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { CloudDialog } from "./components/CloudDialog";
+import { AssistantDialog } from "./components/AssistantDialog";
 import { getMe, login, type Me } from "./lib/cloud";
 
 type Tab = "data" | "variables" | "output";
 type Dialog =
   | { type: "analysis"; def: AnalysisDef }
+  | { type: "assistant" }
   | { type: "compute" }
   | { type: "recode" }
   | { type: "sort" }
@@ -332,6 +334,9 @@ export default function App() {
             </div>
           )}
           <span className="file-name">— {fileName}</span>
+          <button className="assistant-btn" onClick={() => setDialog({ type: "assistant" })} disabled={!hasData} title="Choisir et lancer le bon test automatiquement">
+            ✨ Assistant
+          </button>
           <div className="spacer" />
           {me?.authEnabled && !me.authenticated && (
             <button className="auth-btn" onClick={login}>
@@ -380,6 +385,9 @@ export default function App() {
       </main>
 
       {dialog?.type === "analysis" && <AnalysisDialog def={dialog.def} onClose={() => setDialog(null)} />}
+      {dialog?.type === "assistant" && (
+        <AssistantDialog onClose={() => setDialog(null)} onDone={() => { setDialog(null); setTab("output"); }} />
+      )}
       {dialog?.type === "compute" && <ComputeDialog onClose={() => setDialog(null)} />}
       {dialog?.type === "recode" && <RecodeDialog onClose={() => setDialog(null)} />}
       {dialog?.type === "sort" && <SortDialog onClose={() => setDialog(null)} />}

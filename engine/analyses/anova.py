@@ -4,6 +4,7 @@ import pingouin as pg
 
 from dataset import Dataset
 from analyses.util import r, df_to_table, numeric
+from analyses import apa
 
 
 def _oneway(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
@@ -49,6 +50,14 @@ def _oneway(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
         "ANOVA à un facteur",
     ))
 
+    apa_txt = None
+    try:
+        np2 = aov["np2"].iloc[0] if "np2" in aov.columns else None
+        apa_txt = apa.anova_oneway(factor, dv, aov["F"].iloc[0], aov["DF"].iloc[0], aov["DF"].iloc[1],
+                                   aov["p-unc"].iloc[0], np2)
+    except Exception:
+        apa_txt = None
+
     if post_hoc and post_hoc != "none":
         try:
             if post_hoc == "tukey":
@@ -70,7 +79,10 @@ def _oneway(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
         except Exception:
             pass
 
-    return {"title": "ANOVA à un facteur", "tables": tables}
+    out = {"title": "ANOVA à un facteur", "tables": tables}
+    if apa_txt:
+        out["apa"] = apa_txt
+    return out
 
 
 def _factorial(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:

@@ -51,6 +51,25 @@ function Table({ table }: { table: ResultTable }) {
   );
 }
 
+function ApaBox({ text }: { text: string }) {
+  const setNotice = useStore((s) => s.setNotice);
+  const copy = () => {
+    writeClipboard(text);
+    setNotice("Phrase APA copiée (collez dans votre mémoire).");
+  };
+  return (
+    <div className="apa-box">
+      <div className="apa-head">
+        <span className="apa-title">Phrase prête à citer (format APA)</span>
+        <button className="link-btn" onClick={copy}>
+          copier
+        </button>
+      </div>
+      <p className="apa-text">{text}</p>
+    </div>
+  );
+}
+
 export function OutputView() {
   const results = useStore((s) => s.results);
   const clearResults = useStore((s) => s.clearResults);
@@ -87,6 +106,7 @@ export function OutputView() {
                   <img src={img.src} alt={img.title} />
                 </div>
               ))}
+              {r.apa && <ApaBox text={r.apa} />}
             </>
           )}
         </div>
