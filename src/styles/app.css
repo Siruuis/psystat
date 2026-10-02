@@ -708,6 +708,11 @@ html,
   margin-top: 6px;
 }
 
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .result-table table {
   border-collapse: collapse;
   width: 100%;
@@ -719,6 +724,7 @@ html,
   border: 1px solid var(--border);
   padding: 5px 9px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .result-table th {

@@ -22,26 +22,28 @@ function Table({ table }: { table: ResultTable }) {
           copier
         </button>
       </div>
-      <table>
-        <thead>
-          <tr>
-            {table.columns.map((c, i) => (
-              <th key={i}>{c}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {table.rows.map((row, ri) => (
-            <tr key={ri}>
-              {row.map((cell, ci) => (
-                <td key={ci} className={ci === 0 ? "label-col" : ""}>
-                  {cell == null ? "" : String(cell)}
-                </td>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              {table.columns.map((c, i) => (
+                <th key={i}>{c}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {table.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci} className={ci === 0 ? "label-col" : ""}>
+                    {cell == null ? "" : String(cell)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {table.footnotes?.map((f, i) => (
         <div className="footnote" key={i}>
           {f}
