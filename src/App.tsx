@@ -335,7 +335,7 @@ export default function App() {
           )}
           <span className="file-name">— {fileName}</span>
           <button className="assistant-btn" onClick={() => setDialog({ type: "assistant" })} disabled={!hasData} title="Choisir et lancer le bon test automatiquement">
-            ✨ Assistant
+            Assistant
           </button>
           <div className="spacer" />
           {me?.authEnabled && !me.authenticated && (
