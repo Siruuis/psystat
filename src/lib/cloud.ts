@@ -1,4 +1,5 @@
 import type { Variable, Row } from "../types";
+import { clearAutosave } from "./persist";
 
 export interface Me {
   authenticated: boolean;
@@ -39,6 +40,7 @@ export async function logout() {
   } catch {
     /* ignore */
   }
+  clearAutosave();
   window.location.href = "/";
 }
 

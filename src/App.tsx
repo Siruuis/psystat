@@ -3,7 +3,7 @@ import { useStore } from "./state/store";
 import { importFile } from "./lib/importFile";
 import { engineHealth } from "./lib/engine";
 import { initPyodide, onEngineStatus, type EngineState } from "./lib/pyodideEngine";
-import { initAutosave, loadAutosave } from "./lib/persist";
+import { initAutosave, loadAutosave, setAutosaveOwner } from "./lib/persist";
 import { saveProject, openProject, exportCsv } from "./lib/projectFile";
 import { exportWord, exportPdf } from "./lib/exportResults";
 import { selectionToTSV, writeClipboard } from "./lib/clipboard";
@@ -68,17 +68,17 @@ export default function App() {
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
 
   useEffect(() => {
-    getMe().then(setMe);
-  }, []);
-
-  useEffect(() => {
-    initAutosave();
-    const snap = loadAutosave();
-    if (snap) {
-      useStore.getState().loadData(snap.variables, snap.rows, snap.fileName);
-      const when = new Date(snap.savedAt).toLocaleString("fr-FR");
-      useStore.getState().setNotice(`Session restaurée : ${snap.variables.length} variables (sauvegardée le ${when}).`);
-    }
+    getMe().then((m) => {
+      setMe(m);
+      setAutosaveOwner(m.authenticated && m.email ? m.email : "local");
+      initAutosave();
+      const snap = loadAutosave();
+      if (snap) {
+        useStore.getState().loadData(snap.variables, snap.rows, snap.fileName);
+        const when = new Date(snap.savedAt).toLocaleString("fr-FR");
+        useStore.getState().setNotice(`Session restaurée : ${snap.variables.length} variables (sauvegardée le ${when}).`);
+      }
+    });
   }, []);
 
   const variables = useStore((s) => s.variables);

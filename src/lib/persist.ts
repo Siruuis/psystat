@@ -1,7 +1,11 @@
 import { useStore } from "../state/store";
 import type { Variable, Row } from "../types";
 
-const KEY = "psystat-autosave";
+const LEGACY_KEY = "psystat-autosave";
+const PREFIX = "psystat-autosave:";
+
+let owner = "local";
+let stopped = false;
 
 interface Snapshot {
   variables: Variable[];
@@ -10,9 +14,22 @@ interface Snapshot {
   savedAt: number;
 }
 
+const key = () => PREFIX + owner;
+
+export function setAutosaveOwner(id: string) {
+  owner = id.toLowerCase();
+  try {
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy !== null) {
+      if (owner === "local" && localStorage.getItem(key()) === null) localStorage.setItem(key(), legacy);
+      localStorage.removeItem(LEGACY_KEY);
+    }
+  } catch {}
+}
+
 export function loadAutosave(): Snapshot | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key());
     if (!raw) return null;
     const data = JSON.parse(raw) as Snapshot;
     if (!data.variables || data.variables.length === 0) return null;
@@ -23,11 +40,11 @@ export function loadAutosave(): Snapshot | null {
 }
 
 export function clearAutosave() {
+  stopped = true;
   try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* ignore */
-  }
+    localStorage.removeItem(key());
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {}
 }
 
 export function initAutosave() {
@@ -35,9 +52,10 @@ export function initAutosave() {
   useStore.subscribe((state) => {
     clearTimeout(timer);
     timer = setTimeout(() => {
+      if (stopped) return;
       try {
         if (state.variables.length === 0 && state.rows.length === 0) {
-          localStorage.removeItem(KEY);
+          localStorage.removeItem(key());
           return;
         }
         const snap: Snapshot = {
@@ -46,7 +64,7 @@ export function initAutosave() {
           fileName: state.fileName,
           savedAt: Date.now(),
         };
-        localStorage.setItem(KEY, JSON.stringify(snap));
+        localStorage.setItem(key(), JSON.stringify(snap));
       } catch {
         /* quota exceeded — ignore silently */
       }
