@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { recordUser } from "./users.js";
 
 const MS_TENANT = process.env.MS_TENANT || "common";
 const MS_CLIENT_ID = process.env.MS_CLIENT_ID || "";
@@ -86,6 +87,7 @@ export function requireAuth(req, res, next) {
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: "unauthenticated" });
   req.user = session;
+  recordUser(session);
   next();
 }
 
@@ -137,6 +139,7 @@ export function registerAuth(app) {
         );
       }
       setSessionCookie(res, { email, name });
+      recordUser({ email, name }, true);
       res.setHeader("Set-Cookie", [res.getHeader("Set-Cookie"), `oauth_state=; Path=/api/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=0`].flat());
       res.redirect(APP_URL);
     } catch (e) {
@@ -153,6 +156,7 @@ export function registerAuth(app) {
   app.get("/api/me", (req, res) => {
     const session = getSession(req);
     if (!session) return res.json({ authenticated: false, authEnabled: AUTH_ENABLED });
+    recordUser(session);
     res.json({ authenticated: true, email: session.email, name: session.name });
   });
 }
