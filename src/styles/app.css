@@ -1909,3 +1909,94 @@ html,
   padding: 12px 20px 18px;
   align-items: center;
 }
+
+.recode-dialog {
+  width: min(820px, 96vw);
+}
+
+.recode-dialog .radio-row {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.recode-suffix {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.recode-suffix input {
+  width: 70px;
+}
+
+.recode-cols {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 18px;
+}
+
+.recode-search {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.recode-cols .var-list {
+  max-height: 300px;
+}
+
+.recode-quick {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.recode-likert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.recode-likert input {
+  width: 46px;
+}
+
+.recode-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 230px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.recode-rule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recode-rule select {
+  width: 130px;
+}
+
+.recode-rule input {
+  width: 72px;
+}
+
+.recode-to {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.recode-warn {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  background: color-mix(in srgb, #e67e22 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, #e67e22 40%, var(--border));
+}

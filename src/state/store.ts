@@ -104,6 +104,7 @@ interface AppState {
   pasteMatrix: (startRow: number, startCol: number, matrix: string[][]) => void;
   sortByColumn: (colIndex: number, ascending: boolean) => void;
   addComputedColumn: (name: string, values: (string | number | null)[]) => void;
+  applyColumns: (entries: { name: string; values: (string | number | null)[]; from?: string }[]) => void;
   undo: () => void;
   redo: () => void;
   clearResults: () => void;
@@ -393,6 +394,27 @@ export const useStore = create<AppState>((set, get) => ({
         rows = rows.map((row, i) => ({ ...row, [name]: values[i] ?? null }));
       } else {
         variables.push(variable);
+        rows = rows.map((row, i) => ({ ...row, [name]: values[i] ?? null }));
+      }
+      return { ...pushHistory(state), variables, rows };
+    }),
+
+  applyColumns: (entries) =>
+    set((state) => {
+      const variables = state.variables.slice();
+      let rows = state.rows.slice();
+      const maxLen = Math.max(0, ...entries.map((e) => e.values.length));
+      while (rows.length < maxLen) rows.push(emptyRow(variables));
+      for (const { name, values, from } of entries) {
+        const numeric = values.every((x) => x == null || !isNaN(Number(x)));
+        const type = numeric ? "numeric" : "string";
+        const existing = variables.findIndex((v) => v.name === name);
+        if (existing >= 0) {
+          variables[existing] = { ...variables[existing], type };
+        } else {
+          const src = from ? variables.find((v) => v.name === from) : undefined;
+          variables.push(src ? { ...src, name, type, label: src.label ? `${src.label} (recodé)` : "" } : makeVariable(name, type));
+        }
         rows = rows.map((row, i) => ({ ...row, [name]: values[i] ?? null }));
       }
       return { ...pushHistory(state), variables, rows };

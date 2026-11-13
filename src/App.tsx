@@ -17,7 +17,7 @@ import { VariableView } from "./components/VariableView";
 import { OutputView } from "./components/OutputView";
 import { AnalysisDialog } from "./components/AnalysisDialog";
 import { ComputeDialog } from "./components/ComputeDialog";
-import { RecodeDialog } from "./components/RecodeDialog";
+import { RecodeDialog, type RecodeMode } from "./components/RecodeDialog";
 import { SortDialog } from "./components/SortDialog";
 import { SelectCasesDialog } from "./components/SelectCasesDialog";
 import { TransformDialog, type TransformMode } from "./components/TransformDialog";
@@ -34,7 +34,7 @@ type Dialog =
   | { type: "analysis"; def: AnalysisDef }
   | { type: "assistant" }
   | { type: "compute" }
-  | { type: "recode" }
+  | { type: "recode"; mode: RecodeMode }
   | { type: "sort" }
   | { type: "selectcases" }
   | { type: "transform"; mode: TransformMode }
@@ -269,7 +269,8 @@ export default function App() {
       label: "Transformer",
       items: [
         { label: "Calculer une variable…", onClick: () => setDialog({ type: "compute" }), disabled: !hasData },
-        { label: "Recoder en une variable différente…", onClick: () => setDialog({ type: "recode" }), disabled: !hasData },
+        { label: "Recoder dans les mêmes variables…", onClick: () => setDialog({ type: "recode", mode: "same" }), disabled: !hasData },
+        { label: "Recoder dans des variables différentes…", onClick: () => setDialog({ type: "recode", mode: "new" }), disabled: !hasData },
         { label: "Recodage automatique…", onClick: () => setDialog({ type: "transform", mode: "autorecode" }), disabled: !hasData },
         { label: "Rang des observations…", onClick: () => setDialog({ type: "transform", mode: "rank" }), disabled: !hasData },
         { label: "Compter les occurrences…", onClick: () => setDialog({ type: "transform", mode: "count" }), disabled: !hasData },
@@ -389,7 +390,7 @@ export default function App() {
         <AssistantDialog onClose={() => setDialog(null)} onDone={() => { setDialog(null); setTab("output"); }} />
       )}
       {dialog?.type === "compute" && <ComputeDialog onClose={() => setDialog(null)} />}
-      {dialog?.type === "recode" && <RecodeDialog onClose={() => setDialog(null)} />}
+      {dialog?.type === "recode" && <RecodeDialog initialMode={dialog.mode} onClose={() => setDialog(null)} />}
       {dialog?.type === "sort" && <SortDialog onClose={() => setDialog(null)} />}
       {dialog?.type === "selectcases" && <SelectCasesDialog onClose={() => setDialog(null)} />}
       {dialog?.type === "transform" && <TransformDialog mode={dialog.mode} onClose={() => setDialog(null)} />}

@@ -44,7 +44,7 @@ export async function runTransform(
   variables: Variable[],
   rows: Row[],
   params: Record<string, unknown>
-): Promise<{ values?: (string | number | null)[]; error?: string }> {
+): Promise<{ values?: (string | number | null)[]; columns?: Record<string, (string | number | null)[]>; error?: string }> {
   if (!isElectron) {
     return pyRunTransform(transform, variables, rows, params);
   }

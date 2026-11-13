@@ -28,6 +28,11 @@ const GROUPS: Record<string, Fn[]> = {
     { label: "Median(x, …)", insert: "median(, )", caretBack: 3, desc: "Médiane" },
     { label: "Min(x, …)", insert: "min(, )", caretBack: 3, desc: "Minimum" },
     { label: "Max(x, …)", insert: "max(, )", caretBack: 3, desc: "Maximum" },
+    { label: "Mean.n(x TO y)", insert: "mean.2( TO )", caretBack: 5, desc: "Moyenne seulement si au moins n réponses valides (sinon manquant)" },
+    { label: "Sum.n(x TO y)", insert: "sum.2( TO )", caretBack: 5, desc: "Somme seulement si au moins n réponses valides (sinon manquant)" },
+    { label: "Nvalid(x, …)", insert: "nvalid( TO )", caretBack: 5, desc: "Nombre de réponses valides" },
+    { label: "Nmiss(x, …)", insert: "nmiss( TO )", caretBack: 5, desc: "Nombre de réponses manquantes" },
+    { label: "x TO y", insert: " TO ", desc: "Toutes les variables de x à y (dans l'ordre du tableau)" },
   ],
   Trigonométrie: [
     { label: "Sin(x)", insert: "sin()", caretBack: 1, desc: "Sinus (radians)" },
@@ -145,7 +150,7 @@ export function ComputeDialog({ onClose }: { onClose: () => void }) {
                 value={expr}
                 onFocus={() => setActive("expr")}
                 onChange={(e) => setExpr(e.target.value)}
-                placeholder="ex : (pre + post) / 2   ·   mean(q1, q2, q3)"
+                placeholder="ex : mean(q1 TO q20)   ·   mean.15(q1 TO q20)   ·   (pre + post) / 2"
               />
               <div className="compute-keypad">
                 {KEYS.map((k, i) => (

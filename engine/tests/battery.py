@@ -347,6 +347,28 @@ err("roc_non_binaire", run("roc", {"actual": "groupe", "predictor": "x"}))
 err("compute_div0", {"error": tr("compute", {"expression": "x / 0"}).get("error")} if not np.isfinite(tr("compute", {"expression": "x / 0"})["values"][0] if tr("compute", {"expression": "x / 0"}).get("values") else float("nan")) else {"error": None}, must_be_error=False)
 err("ks_sur_texte", run("nonparametric", {"kind": "ks_1sample", "variable": "sstr"}))
 
+# scores d'echelle facon SPSS (TO, MEAN.n, SUM manquant, recodage multiple)
+qs = ["q1", "q2", "q3", "q4", "q5", "q6"]
+Q = df[qs].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+m_to = tr("compute", {"expression": "mean(q1 TO q6)"})["values"]
+ok("score.mean_TO", all(abs(m_to[i] - np.nanmean(Q[i])) < 1e-9 for i in range(N)))
+s_to = tr("compute", {"expression": "SUM(q1 to q6)"})["values"]
+ok("score.sum_TO_casse", all(abs(s_to[i] - np.nansum(Q[i])) < 1e-9 for i in range(N)))
+ok("score.TO_inconnu_erreur", "error" in tr("compute", {"expression": "mean(q1 TO qzz)"}))
+from dataset import Dataset as _DS
+import transform as _T
+_mini = _DS(columns=["a", "b", "c"], rows=[{"a": 1, "b": 2, "c": 3}, {"a": None, "b": None, "c": None}, {"a": 4, "b": None, "c": None}], meta={})
+ok("score.sum_vide_manquant", _T.compute(_mini, {"expression": "sum(a TO c)"})["values"] == [6.0, None, 4.0])
+ok("score.mean_n", _T.compute(_mini, {"expression": "mean.2(a TO c)"})["values"] == [2.0, None, None])
+ok("score.nvalid", _T.compute(_mini, {"expression": "nvalid(a TO c)"})["values"] == [3.0, 0.0, 1.0])
+inv = tr("recode", {"sources": ["q2", "q5"], "rules": [{"kind": "value", "from": k, "to": 6 - k} for k in range(1, 6)]})
+ok("recode.multi_inverse", all(inv["columns"][v][i] == 6 - Q[i, qs.index(v)] for v in ["q2", "q5"] for i in range(N) if not np.isnan(Q[i, qs.index(v)])))
+rg = tr("recode", {"sources": ["q1"], "rules": [{"kind": "range", "from": "", "to_value": 2, "to": 0}, {"kind": "range", "from": 3, "to_value": "", "to": 1}]})
+ok("recode.plages", all(rg["columns"]["q1"][i] == (0 if Q[i, 0] <= 2 else 1) for i in range(N) if not np.isnan(Q[i, 0])))
+mi = _T.recode(_mini, {"sources": ["b"], "rules": [{"kind": "missing", "to": 9}, {"kind": "else", "to": 1}]})
+ok("recode.manquante_sinon", mi["columns"]["b"] == [1, 9, 9])
+ok("recode.ancien_format", tr("recode", {"source": "groupe", "rules": [{"from": 1, "to": 99}]}).get("values") is not None)
+
 print(f"\n{'='*50}\nRESULTAT : {PASS} PASS / {PASS+FAIL} tests  ({FAIL} echecs)\n{'='*50}")
 if fails:
     print("ECHECS :")

@@ -1,13 +1,40 @@
 from typing import Any
 import ast
 import operator
+import re
+import warnings
 import numpy as np
 import pandas as pd
 
 from dataset import Dataset
 
 def _col(*a):
-    return np.vstack([np.asarray(x, dtype=float) for x in a])
+    return np.vstack([np.atleast_1d(np.asarray(x, dtype=float)) for x in a])
+
+
+def _rowwise(fn):
+    def run(*a):
+        m = _col(*a)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            out = fn(m)
+        out = np.asarray(out, dtype=float)
+        out[np.all(np.isnan(m), axis=0)] = np.nan
+        return out
+    return run
+
+
+def _with_min_valid(fn):
+    def run(n, *a):
+        m = _col(*a)
+        out = fn(*a)
+        out = np.asarray(out, dtype=float)
+        out[np.sum(~np.isnan(m), axis=0) < int(n)] = np.nan
+        return out
+    return run
+
+
+_STAT_NAMES = ["mean", "sum", "sd", "std", "variance", "median", "min", "max"]
 
 
 SAFE_FUNCS = {
@@ -30,15 +57,40 @@ SAFE_FUNCS = {
     "arsin": np.arcsin,
     "artan": np.arctan,
     # statistiques (sur plusieurs variables d'une même observation)
-    "mean": lambda *a: np.nanmean(_col(*a), axis=0),
-    "sum": lambda *a: np.nansum(_col(*a), axis=0),
-    "sd": lambda *a: np.nanstd(_col(*a), axis=0, ddof=1),
-    "std": lambda *a: np.nanstd(_col(*a), axis=0, ddof=1),
-    "variance": lambda *a: np.nanvar(_col(*a), axis=0, ddof=1),
-    "median": lambda *a: np.nanmedian(_col(*a), axis=0),
-    "min": lambda *a: np.nanmin(_col(*a), axis=0),
-    "max": lambda *a: np.nanmax(_col(*a), axis=0),
+    "mean": _rowwise(lambda m: np.nanmean(m, axis=0)),
+    "sum": _rowwise(lambda m: np.nansum(m, axis=0)),
+    "sd": _rowwise(lambda m: np.nanstd(m, axis=0, ddof=1)),
+    "std": _rowwise(lambda m: np.nanstd(m, axis=0, ddof=1)),
+    "variance": _rowwise(lambda m: np.nanvar(m, axis=0, ddof=1)),
+    "median": _rowwise(lambda m: np.nanmedian(m, axis=0)),
+    "min": _rowwise(lambda m: np.nanmin(m, axis=0)),
+    "max": _rowwise(lambda m: np.nanmax(m, axis=0)),
+    "nvalid": lambda *a: np.sum(~np.isnan(_col(*a)), axis=0).astype(float),
+    "nmiss": lambda *a: np.sum(np.isnan(_col(*a)), axis=0).astype(float),
 }
+
+for _n in _STAT_NAMES:
+    SAFE_FUNCS[f"__min_{_n}"] = _with_min_valid(SAFE_FUNCS[_n])
+
+
+def _expand(expression: str, columns: list[str]) -> str:
+    lower = {c.lower(): c for c in columns}
+
+    def to_range(m):
+        a, b = lower.get(m.group(1).lower()), lower.get(m.group(2).lower())
+        if a is None or b is None:
+            raise ValueError(f"variable inconnue dans « {m.group(0)} »")
+        i, j = columns.index(a), columns.index(b)
+        if i > j:
+            i, j = j, i
+        return ", ".join(columns[i:j + 1])
+
+    expression = re.sub(r"\b([A-Za-z_][\w]*)\s+TO\s+([A-Za-z_][\w]*)\b", to_range, expression, flags=re.IGNORECASE)
+    names = "|".join(_STAT_NAMES)
+    expression = re.sub(rf"\b({names})\.(\d+)\s*\(", lambda m: f"__min_{m.group(1).lower()}({m.group(2)}, ", expression, flags=re.IGNORECASE)
+    expression = re.sub(rf"\b({names}|nvalid|nmiss)\s*\(", lambda m: m.group(1).lower() + "(", expression, flags=re.IGNORECASE)
+    return expression
+
 
 _BIN = {
     ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
@@ -87,6 +139,7 @@ def compute(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     for col in df.columns:
         env[col] = pd.to_numeric(df[col], errors="coerce").to_numpy(dtype=float)
     try:
+        expression = _expand(expression, list(df.columns))
         tree = ast.parse(expression, mode="eval")
         result = _eval(tree, env)
     except Exception as exc:
@@ -98,7 +151,7 @@ def compute(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
     condition = params.get("condition")
     if condition:
         try:
-            raw = _eval(ast.parse(condition, mode="eval"), env)
+            raw = _eval(ast.parse(_expand(condition, list(df.columns)), mode="eval"), env)
         except Exception as exc:
             return {"error": f"Condition invalide : {exc}"}
         cond = np.asarray(raw)
@@ -124,21 +177,59 @@ def _norm(value: Any) -> str:
     return str(value)
 
 
-def recode(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
-    df = dataset.to_frame()
-    source = params["source"]
-    rules = params.get("rules", [])
-    else_value = params.get("else_value")
-    keep_else = params.get("keep_else", True)
+def _num(value: Any):
+    try:
+        f = float(value)
+        return None if np.isnan(f) else f
+    except (TypeError, ValueError):
+        return None
 
-    mapping = {_norm(rule["from"]): rule["to"] for rule in rules}
+
+def _bound(value: Any, low: bool) -> float:
+    if value is None or str(value).strip().lower() in ("", "lowest", "lo", "min", "highest", "hi", "max"):
+        return -np.inf if low else np.inf
+    return float(value)
+
+
+def _apply_rules(series, rules, keep_else: bool, else_value):
     out = []
-    for v in df[source]:
+    for v in series:
         key = _norm(v)
-        if key in mapping:
-            out.append(mapping[key])
+        x = _num(v)
+        missing = key == ""
+        hit = False
+        res = None
+        for rule in rules:
+            kind = rule.get("kind", "value")
+            if kind == "missing" and missing:
+                hit, res = True, rule["to"]
+            elif kind == "range" and x is not None and _bound(rule.get("from"), True) <= x <= _bound(rule.get("to_value"), False):
+                hit, res = True, rule["to"]
+            elif kind == "value" and not missing and (_norm(rule.get("from")) == key or (x is not None and _num(rule.get("from")) == x)):
+                hit, res = True, rule["to"]
+            elif kind == "else" and not missing:
+                hit, res = True, rule["to"]
+            if hit:
+                break
+        if hit:
+            out.append(None if res is None or res == "" else res)
         elif keep_else:
-            out.append(None if key == "" else v)
+            out.append(None if missing else v)
         else:
             out.append(else_value)
-    return {"values": out}
+    return out
+
+
+def recode(dataset: Dataset, params: dict[str, Any]) -> dict[str, Any]:
+    df = dataset.to_frame()
+    sources = params.get("sources") or [params["source"]]
+    rules = params.get("rules", [])
+    keep_else = params.get("keep_else", True)
+    else_value = params.get("else_value")
+    for src in sources:
+        if src not in df.columns:
+            return {"error": f"Variable introuvable : {src}"}
+    columns = {src: _apply_rules(df[src], rules, keep_else, else_value) for src in sources}
+    if "source" in params and not params.get("sources"):
+        return {"values": columns[sources[0]]}
+    return {"columns": columns}
